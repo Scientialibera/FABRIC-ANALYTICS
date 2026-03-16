@@ -1,0 +1,48 @@
+[fabric]
+workspace_id = ""
+
+[naming]
+prefix = "analytics"
+
+[lakehouses]
+landing_name = "lh_landing"
+landing_id = ""
+bronze_name = "lh_bronze"
+bronze_id = ""
+silver_name = "lh_silver"
+silver_id = ""
+gold_name = "lh_gold"
+gold_id = ""
+
+[source]
+source_lakehouse_id = ""
+source_lakehouse_name = ""
+tables = ["orders", "shipments", "inventory", "production", "master_sku", "master_plant", "master_customer", "master_market"]
+
+[features]
+date_column = "order_date"
+frequency = "M"
+grain_columns = ["plant_id", "sku_id"]
+target_column = "quantity"
+feature_columns = ["price", "discount", "promo_flag", "lead_time", "safety_stock"]
+feature_types = ["float", "float", "int", "float", "float"]
+
+[training]
+test_split_ratio = 0.2
+sarima_order = [1, 1, 1]
+sarima_seasonal_order = [1, 1, 1, 12]
+xgboost_n_estimators = 500
+xgboost_max_depth = 6
+xgboost_learning_rate = 0.05
+exp_smoothing_trend = "add"
+exp_smoothing_seasonal = "add"
+exp_smoothing_seasonal_periods = 12
+
+[mlflow]
+experiment_name = "demand_forecast"
+registered_model_prefix = "demand_model"
+
+[scoring]
+forecast_horizon = 6
+output_table = "forecast_results"
+metrics_table = "model_metrics"
