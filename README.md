@@ -128,6 +128,38 @@ All training notebooks use Fabric's native MLflow integration:
 | `[scoring]` | `forecast_horizon` | Steps ahead to forecast |
 | `[scoring]` | `output_table`, `metrics_table` | Gold output table names |
 
+## Fabric Workspace Structure
+
+When deployed, everything nests under a project folder in the Fabric workspace:
+
+```
+analytics/
+  data/
+    lh_landing                   ← raw snapshot copies
+    lh_bronze                    ← deduplicated, cleansed
+    lh_silver                    ← feature table, predictions
+    lh_gold                      ← scored forecasts, aggregations, metrics
+  notebooks/
+    main/
+      01_ingest_main
+      02_transform_main
+      03_feature_engineering_main
+      04_train_xgboost_main      ← runs in parallel with other 04_*
+      04_train_sarima_main
+      04_train_exp_smoothing_main
+      05_score_main
+      06_aggregate_main
+    modules/
+      config_module
+      utils_module
+      feature_engineering_module
+      train_xgboost_module
+      train_sarima_module
+      train_exp_smoothing_module
+      scoring_module
+  demand_forecast                ← MLflow Experiment
+```
+
 ## Deployment
 
 ### Prerequisites
@@ -141,9 +173,12 @@ pwsh ./deploy/deploy-fabric.ps1
 ```
 
 This idempotently:
-- Creates `notebooks/main` and `notebooks/modules` folder structure in the workspace.
-- Creates Landing, Bronze, Silver, and Gold lakehouses (or reuses if ID provided / name exists).
-- Pushes all notebook source files (creates new or updates existing definitions).
+- Creates the project folder tree (`analytics/data/`, `analytics/notebooks/main/`, `analytics/notebooks/modules/`).
+- Creates an MLflow experiment for model tracking.
+- Creates Source, Landing, Bronze, Silver, and Gold lakehouses under `data/` (or reuses if ID provided / name exists).
+- Deploys all notebooks in parallel with LRO polling (creates new or updates existing definitions).
+- Caches Fabric API tokens (4-min refresh) and handles 429 rate-limiting.
+- Supports workspace lookup by name or ID.
 
 ### Run Pipeline
 Execute notebooks in order from the Fabric workspace UI or via scheduled pipelines:
