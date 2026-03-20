@@ -189,6 +189,17 @@ Execute notebooks in order from the Fabric workspace UI or via scheduled pipelin
 5. `05_score_main`
 6. `06_aggregate_main`
 
+## Deployment Lessons Learned
+
+These are the recommended deployment conventions for this repo:
+
+- Use `pwsh ./deploy/deploy-fabric.ps1` as the canonical deploy/push command
+- Keep deployment config centralized in `deploy/deploy.config.toml` and validate workspace/lakehouse targets before run
+- Treat notebook files in `deploy/assets/notebooks/` as source of truth; never rely on manual Fabric UI notebook edits
+- Preserve deterministic push order (modules first, then main notebooks), with parallelism only where safe
+- Keep deployment idempotent and rerunnable; on errors, fix source/config and rerun
+- Prefer explicit failure over silent fallback when required models/artifacts are missing
+
 ## Project Layout
 - `deploy/deploy.config.toml` - central configuration
 - `deploy/deploy-fabric.ps1` - idempotent Fabric artifact deployment
