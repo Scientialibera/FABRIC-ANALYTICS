@@ -22,6 +22,34 @@ function Get-Config {
     return $json | ConvertFrom-Json
 }
 
+function Assert-DeploymentPrereqs {
+    if ($PSVersionTable.PSVersion.Major -lt 7) {
+        throw "PowerShell 7+ is required. Run with: pwsh ./deploy/deploy-fabric.ps1"
+    }
+    if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
+        throw "Azure CLI (az) is required but was not found in PATH."
+    }
+    if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
+        throw "Python is required but was not found in PATH."
+    }
+    az account show --only-show-errors | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Azure CLI is not authenticated. Run: az login"
+    }
+}
+
+function Assert-NotebookSourceDir {
+    param([string]$Dir, [string]$Label)
+    if (-not (Test-Path -LiteralPath $Dir -PathType Container)) {
+        throw "$Label notebook directory not found: $Dir"
+    }
+    $notebooks = @(Get-ChildItem -Path $Dir -Filter "*.py" -File -ErrorAction SilentlyContinue)
+    if ($notebooks.Count -eq 0) {
+        throw "$Label notebook directory has no .py files: $Dir"
+    }
+}
+
+Assert-DeploymentPrereqs
 $config = Get-Config -Path $ConfigPath
 
 Write-Host "`n=== Fabric Analytics -- Deployment ===" -ForegroundColor Cyan
@@ -313,10 +341,12 @@ $sourceId = $lakehouseIds["source"]; $landingId = $lakehouseIds["landing"]; $bro
 # 4. Deploy notebooks in parallel
 Write-Host "`n[4/5] Deploying module notebooks (parallel)..." -ForegroundColor Yellow
 $modulesDir = Join-Path (Join-Path $PSScriptRoot "assets") "notebooks" | Join-Path -ChildPath "modules"
+Assert-NotebookSourceDir -Dir $modulesDir -Label "Module"
 Deploy-NotebooksParallel -WorkspaceId $workspaceId -FolderId $modulesFolderId -LocalDir $modulesDir -Label "module"
 
 Write-Host "`n[5/5] Deploying main notebooks (parallel)..." -ForegroundColor Yellow
 $mainDir = Join-Path (Join-Path $PSScriptRoot "assets") "notebooks" | Join-Path -ChildPath "main"
+Assert-NotebookSourceDir -Dir $mainDir -Label "Main"
 Deploy-NotebooksParallel -WorkspaceId $workspaceId -FolderId $mainFolderId -LocalDir $mainDir -Label "main"
 
 # ── Summary ─────────────────────────────────────────────────────
